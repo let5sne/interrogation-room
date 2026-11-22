@@ -72,19 +72,26 @@ async function sendAsk(text) {
   if (!state.sessionId) return;
   addLine("detective", text);
   const target = addLine("suspect", "");
-  const resp = await fetch("/api/interrogate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session_id: state.sessionId, text }),
-  });
-  const reader = resp.body.getReader();
-  const decoder = new TextDecoder();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    target.textContent += decoder.decode(value, { stream: true });
-    const dlg = $("#dialog");
-    dlg.scrollTop = dlg.scrollHeight;
+  try {
+    const resp = await fetch("/api/interrogate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: state.sessionId, text }),
+    });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      target.textContent += decoder.decode(value, { stream: true });
+      const dlg = $("#dialog");
+      dlg.scrollTop = dlg.scrollHeight;
+    }
+  } catch (err) {
+    target.textContent = "（连接中断，请重试）";
+    const line = target.closest(".line");
+    if (line) line.classList.add("warn");
   }
   state.turn += 1;
   $("#turn-num").textContent = state.turn;

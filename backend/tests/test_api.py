@@ -104,3 +104,15 @@ def test_pressure_endpoint(monkeypatch, tmp_path):
     assert r.status_code == 200
     assert r.json()["composure"] <= 100
     assert appmod._store.get(sid)["turn_count"] == 1
+
+def test_observe_endpoint(monkeypatch, tmp_path):
+    import app as appmod
+    from session_store import SessionStore
+    monkeypatch.setattr(appmod, "_store", SessionStore(str(tmp_path / "api7.db")))
+    c = TestClient(appmod.app)
+    sid = c.post("/api/session", json={"case_id": "case_001"}).json()["session_id"]
+    r = c.post("/api/observe", json={"session_id": sid})
+    assert r.status_code == 200
+    body = r.json()
+    assert "description" in body
+    assert body["mood"] == 100
