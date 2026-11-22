@@ -128,11 +128,15 @@ async function doPressure() {
   });
   const d = await r.json();
   if (typeof d.composure === "number") setComposure(d.composure);
-  const target = addLine("suspect", "");
-  typeInto(target, d.message || "");
+  if (d.lawyer_up) {
+    const target = addLine("suspect", "");
+    typeInto(target, d.message || "我要请律师，无可奉告。");
+    setTimeout(() => showResult(false, "嫌疑人要求律师，审讯终止，你失败了。"), 1200);
+  } else {
+    addLine("suspect", "（嫌疑人被你的气势震了一下，没敢吭声）");
+  }
   state.turn += 1;
   $("#turn-num").textContent = state.turn;
-  if (d.lawyer_up) setTimeout(() => showResult(false, "嫌疑人要求律师，审讯终止，你失败了。"), 1200);
 }
 
 async function doObserve() {
