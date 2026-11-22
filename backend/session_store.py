@@ -3,6 +3,7 @@ import sqlite3
 import threading
 import time
 import uuid
+from contextlib import closing
 
 
 class SessionStore:
@@ -17,7 +18,7 @@ class SessionStore:
         return conn
 
     def _init_db(self):
-        with self._lock, self._conn() as conn:
+        with self._lock, closing(self._conn()) as conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS sessions (
@@ -33,6 +34,7 @@ class SessionStore:
                 )
                 """
             )
+            conn.commit()
 
     @staticmethod
     def _default_state():
@@ -60,21 +62,22 @@ class SessionStore:
         sid = uuid.uuid4().hex
         now = time.time()
         state = self._default_state()
-        with self._lock, self._conn() as conn:
+        with self._lock, closing(self._conn()) as conn:
             conn.execute(
                 "INSERT INTO sessions (session_id, case_id, composure, pressure_count, turn_count, status, state_json, created_at, updated_at) "
                 "VALUES (?,?,?,?,?,?,?,?,?)",
                 (sid, case_id, composure, 0, 0, "active",
                  json.dumps(state, ensure_ascii=False), now, now),
             )
+            conn.commit()
         return self.get(sid)
 
     def get(self, session_id: str):
-        with self._conn() as conn:
+        with closing(self._conn()) as conn:
             row = conn.execute(
                 "SELECT * FROM sessions WHERE session_id=?", (session_id,)
             ).fetchone()
-        return self._row_to_session(row) if row else None
+            return self._row_to_session(row) if row else None
 
     def update(self, session_id: str, **fields):
         if "state" in fields:
@@ -84,5 +87,6 @@ class SessionStore:
         fields["updated_at"] = time.time()
         cols = ", ".join(f"{k}=?" for k in fields)
         values = list(fields.values()) + [session_id]
-        with self._lock, self._conn() as conn:
+        with self._lock, closing(self._conn()) as conn:
             conn.execute(f"UPDATE sessions SET {cols} WHERE session_id=?", values)
+            conn.commit()
