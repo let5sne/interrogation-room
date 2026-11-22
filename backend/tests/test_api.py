@@ -23,3 +23,27 @@ def test_create_session_returns_brief_and_evidence(monkeypatch, tmp_path):
     assert len(body["evidence"]) == 6
     # 证据不得包含 reveals/breakable_by
     assert "reveals" not in body["evidence"][0]
+
+
+def test_interrogate_streams_and_updates_state(monkeypatch, tmp_path):
+    import app as appmod
+    from session_store import SessionStore
+    monkeypatch.setattr(appmod, "_store", SessionStore(str(tmp_path / "api2.db")))
+    # mock LLM
+    def fake_stream(self, messages, **kw):
+        yield "我"
+        yield "没"
+        yield "有"
+    monkeypatch.setattr(appmod.LLMClient, "stream", fake_stream)
+    client2 = TestClient(appmod.app)
+    sid = client2.post("/api/session", json={"case_id": "case_001"}).json()["session_id"]
+    with client2.stream("POST", "/api/interrogate", json={"session_id": sid, "text": "你几点走的？"}) as r:
+        assert r.status_code == 200
+        chunks = []
+        for chunk in r.iter_text():
+            chunks.append(chunk)
+    assert "我" in "".join(chunks)
+    # 回合数 +1、对话已记录
+    state = appmod._store.get(sid)
+    assert state["turn_count"] == 1
+    assert state["state"]["transcript"][0]["role"] == "detective"

@@ -1,11 +1,14 @@
 from pathlib import Path
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from session_store import SessionStore
 from cases.case_001 import get_case
+from prompt_builder import PromptBuilder
+from llm_client import LLMClient, LLMError
+from truth_engine import TruthEngine
 import settings
 
 app = FastAPI(title="Interrogation Room")
@@ -54,3 +57,46 @@ def create_session(req: SessionRequest):
         "composure": s["composure"],
         "evidence": _public_evidence(case),
     }
+
+
+class InterrogateRequest(BaseModel):
+    session_id: str
+    text: str
+
+
+@app.post("/api/interrogate")
+def interrogate(req: InterrogateRequest):
+    s = _store.get(req.session_id)
+    if s is None:
+        return {"error": "session not found"}
+    case = get_case(s["case_id"])
+    pb = PromptBuilder(case)
+    llm = LLMClient()
+
+    def gen():
+        # 先用「历史 + 本回合输入」组装提示（此时 transcript 尚未含本回合输入，避免重复）
+        system = pb.build_system(state=s["state"])
+        user = pb.build_turn(state=s["state"], player_input=req.text)
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ]
+        full = []
+        try:
+            for delta in llm.stream(messages):
+                full.append(delta)
+                yield delta
+        except LLMError:
+            yield "（嫌疑人沉默不语，请重试）"
+        # 收尾：把本回合「玩家输入 + 嫌疑人回复」写入 transcript，更新回合数
+        reply = "".join(full) or "（沉默）"
+        s["state"]["transcript"].append({"role": "detective", "text": req.text})
+        s["state"]["transcript"].append({"role": "suspect", "text": reply})
+        s["turn_count"] += 1
+        _store.update(
+            s["session_id"],
+            turn_count=s["turn_count"],
+            state=s["state"],
+        )
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
