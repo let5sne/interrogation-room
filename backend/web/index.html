@@ -3,11 +3,74 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>审讯室</title>
+    <title>审讯室 · 谎言侦探</title>
     <link rel="stylesheet" href="/static/style.css" />
   </head>
   <body>
-    <div id="app">审讯室 · 加载中</div>
+    <div class="room">
+      <header class="hud">
+        <div class="title">审讯室 <span id="case-title"></span></div>
+        <div class="meters">
+          <div class="meter"><span>镇定</span><div class="bar"><i id="composure-bar"></i></div><b id="composure-num">100</b></div>
+          <div class="turn">回合 <b id="turn-num">0</b></div>
+        </div>
+      </header>
+
+      <main class="stage">
+        <aside class="portrait">
+          <div class="suspect" id="suspect">嫌疑人</div>
+          <div class="mood" id="mood">从容</div>
+        </aside>
+        <section class="dialog" id="dialog"></section>
+      </main>
+
+      <section class="evidence-tray">
+        <h3>证据托盘 <span class="hint">（点击下方按钮出示）</span></h3>
+        <div id="evidence-list"></div>
+      </section>
+
+      <footer class="controls">
+        <div class="actions">
+          <button data-act="pressure">施压</button>
+          <button data-act="observe">观察微表情</button>
+          <button data-act="accuse-open">指认</button>
+        </div>
+        <form id="input-form" class="ask">
+          <input id="ask-input" placeholder="输入你的问话，回车发送…" autocomplete="off" />
+          <button type="submit">发送</button>
+        </form>
+      </footer>
+    </div>
+
+    <div class="modal" id="brief-modal">
+      <div class="modal-card">
+        <h2>案情简报</h2>
+        <p id="brief-text"></p>
+        <h3>现有证据</h3>
+        <div id="brief-evidence"></div>
+        <button id="brief-start">开始审讯</button>
+      </div>
+    </div>
+
+    <div class="modal hidden" id="accuse-modal">
+      <div class="modal-card">
+        <h2>指认</h2>
+        <label>凶手 <input id="accuse-culprit" placeholder="姓名" /></label>
+        <label>手法 <input id="accuse-method" placeholder="如何作案" /></label>
+        <label>动机 <input id="accuse-motive" placeholder="为什么" /></label>
+        <button id="accuse-submit">提交指认</button>
+        <button id="accuse-cancel" class="ghost">取消</button>
+      </div>
+    </div>
+
+    <div class="modal hidden" id="result-modal">
+      <div class="modal-card">
+        <h2 id="result-title"></h2>
+        <p id="result-text"></p>
+        <button id="result-restart">再玩一次</button>
+      </div>
+    </div>
+
     <script src="/static/game.js"></script>
   </body>
 </html>
