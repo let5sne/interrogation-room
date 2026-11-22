@@ -124,3 +124,39 @@ def present(req: PresentRequest):
         _store.update(s["session_id"], composure=new_comp, state=s["state"])
         return {"hit": True, "composure": new_comp, "message": res["contradiction"]}
     return {"hit": False, "composure": s["composure"], "message": "这条证据没能戳中矛盾。"}
+
+
+class AccuseRequest(BaseModel):
+    session_id: str
+    culprit: str
+    method: str
+    motive: str
+
+
+@app.post("/api/accuse")
+def accuse(req: AccuseRequest):
+    s = _store.get(req.session_id)
+    if s is None:
+        return {"error": "session not found"}
+    case = get_case(s["case_id"])
+    eng = TruthEngine(case)
+    res = eng.judge({
+        "culprit": req.culprit,
+        "method": req.method,
+        "motive": req.motive,
+    })
+    new_status = "won" if res["win"] else "lost"
+    s["state"]["accusation"] = {
+        "culprit": req.culprit, "method": req.method, "motive": req.motive,
+    }
+    _store.update(s["session_id"], status=new_status, state=s["state"])
+    return {
+        "win": res["win"],
+        "ending": res["ending"],
+        "reason": res["reason"],
+        "truth": {
+            "culprit": case["culprit"],
+            "method": case["method"],
+            "motive": case["motive"],
+        },
+    }

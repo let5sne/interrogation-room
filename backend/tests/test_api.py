@@ -63,3 +63,32 @@ def test_present_key_evidence_drops_composure(monkeypatch, tmp_path):
     state = appmod._store.get(sid)
     assert state["composure"] == body["composure"]
     assert len(state["state"]["contradictions"]) == 1
+
+
+def test_accuse_win(monkeypatch, tmp_path):
+    import app as appmod
+    from session_store import SessionStore
+    monkeypatch.setattr(appmod, "_store", SessionStore(str(tmp_path / "api4.db")))
+    client2 = TestClient(appmod.app)
+    sid = client2.post("/api/session", json={"case_id": "case_001"}).json()["session_id"]
+    r = client2.post("/api/accuse", json={
+        "session_id": sid,
+        "culprit": "林晚",
+        "method": "用奖杯重击",
+        "motive": "挪用资金被发现，杀人灭口",
+    })
+    body = r.json()
+    assert body["win"] is True
+    assert appmod._store.get(sid)["status"] != "active"
+
+
+def test_accuse_lose(monkeypatch, tmp_path):
+    import app as appmod
+    from session_store import SessionStore
+    monkeypatch.setattr(appmod, "_store", SessionStore(str(tmp_path / "api5.db")))
+    client2 = TestClient(appmod.app)
+    sid = client2.post("/api/session", json={"case_id": "case_001"}).json()["session_id"]
+    r = client2.post("/api/accuse", json={
+        "session_id": sid, "culprit": "园丁", "method": "下毒", "motive": "报复",
+    })
+    assert r.json()["win"] is False
