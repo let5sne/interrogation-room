@@ -1,10 +1,23 @@
 # 部署到魔搭创空间（ModelScope Studio）
 
-本游戏是 Docker 应用（FastAPI + 原生前端），通过**魔搭创空间的 Web 界面**部署。CLI 不支持 Studio，所以这一步需要在浏览器里完成（约 10 分钟）。
+本游戏是 Docker 应用（FastAPI + 原生前端），部署到**魔搭创空间（ModelScope Studio）**。
 
 > 已验证：`docker build` 成功（镜像 289MB），容器内 `/api/health`、首页、静态资源均 200，`uvicorn` 正常监听 7860。
 
----
+## 方式 A：一键脚本（推荐）
+
+```bash
+export MODELSCOPE_API_KEY=ms-xxxxxxxx        # 从 https://modelscope.cn/my/myaccesstoken 获取
+python3 scripts/deploy_studio.py --owner <你的用户名> --repo interrogation-room
+```
+
+脚本自动完成：查用户 → 建 Docker 创空间 → 推送代码（main→master）→ 写密钥 `MODELSPACE_API_KEY`/`MODELSPACE_MODEL` → 触发部署 → 跟踪日志 → 打印创空间地址。
+
+> ⚠️ **Docker 类型创空间前提**：需先完成「阿里云账号绑定 + 实名认证」，否则镜像无法构建：<https://modelscope.cn/docs/studios/docker>
+>
+> 默认免费规格 `platform/2v-cpu-16g-mem`；付费规格（`--hardware paid/...`）会计费，需你自行确认。
+
+## 方式 B：网页后台手动部署（约 10 分钟）
 
 ## 0. 前置准备
 
@@ -13,6 +26,7 @@
    - 登录后打开 [API Key 管理页](https://www.modelscope.cn/my/myaccesstoken)
    - 创建 SDK Token，形如 `ms-xxxxxxxx`。
 3. 确认本仓库 `backend/` 目录可访问（就在本机）。
+4. （Docker 类型必做）完成「阿里云账号绑定 + 实名认证」：<https://modelscope.cn/docs/studios/docker>，否则镜像无法构建。
 
 ## 1. 新建创空间（Studio）
 
