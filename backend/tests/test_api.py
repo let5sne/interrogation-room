@@ -47,3 +47,19 @@ def test_interrogate_streams_and_updates_state(monkeypatch, tmp_path):
     state = appmod._store.get(sid)
     assert state["turn_count"] == 1
     assert state["state"]["transcript"][0]["role"] == "detective"
+
+
+def test_present_key_evidence_drops_composure(monkeypatch, tmp_path):
+    import app as appmod
+    from session_store import SessionStore
+    monkeypatch.setattr(appmod, "_store", SessionStore(str(tmp_path / "api3.db")))
+    client2 = TestClient(appmod.app)
+    sid = client2.post("/api/session", json={"case_id": "case_001"}).json()["session_id"]
+    r = client2.post("/api/present", json={"session_id": sid, "lie_id": "L1", "evidence_id": "E5"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["hit"] is True
+    assert body["composure"] <= 70  # 100-30
+    state = appmod._store.get(sid)
+    assert state["composure"] == body["composure"]
+    assert len(state["state"]["contradictions"]) == 1

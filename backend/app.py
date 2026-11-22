@@ -100,3 +100,27 @@ def interrogate(req: InterrogateRequest):
         )
 
     return StreamingResponse(gen(), media_type="text/event-stream")
+
+
+class PresentRequest(BaseModel):
+    session_id: str
+    lie_id: str | None = None
+    evidence_id: str
+
+
+@app.post("/api/present")
+def present(req: PresentRequest):
+    s = _store.get(req.session_id)
+    if s is None:
+        return {"error": "session not found"}
+    case = get_case(s["case_id"])
+    eng = TruthEngine(case)
+    res = eng.present_evidence(req.lie_id, s["state"], req.evidence_id)
+    if res["hit"]:
+        new_comp = eng.clamp(s["composure"] + res["composure_delta"])
+        s["state"]["contradictions"].append(
+            {"evidence": req.evidence_id, "note": res["contradiction"]}
+        )
+        _store.update(s["session_id"], composure=new_comp, state=s["state"])
+        return {"hit": True, "composure": new_comp, "message": res["contradiction"]}
+    return {"hit": False, "composure": s["composure"], "message": "这条证据没能戳中矛盾。"}
