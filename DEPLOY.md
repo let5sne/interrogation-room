@@ -86,7 +86,7 @@ web/game.js
 - **首页 500 / 起不来**：查看创空间「日志」，多为缺依赖或密钥未配；确认 `MODELSPACE_API_KEY` 已设置。
 - **AI 不回复 / 报错**：确认 `MODELSPACE_API_KEY` 有效、`MODELSPACE_MODEL` 是平台可用模型 ID。
 - **端口**：容器监听 `7860`（Dockerfile 已 `EXPOSE 7860`）。
-- **数据持久化**：默认 `sessions.db` 在容器内，重启会丢；比赛演示足够，如需持久化可挂载卷或后续改用外部 DB。
+- **数据持久化**：默认 `sessions.db` 在容器内，重启会丢（比赛演示足够）。如需持久化，把环境变量 `DB_PATH` 设为 `/mnt/workspace/sessions.db`（创空间持久目录）。
 
 ## 6. 参赛提交清单（对照赛事要求）
 

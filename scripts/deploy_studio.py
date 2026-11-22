@@ -51,8 +51,8 @@ def main():
     ap.add_argument("--owner", required=True, help="ModelScope 用户名")
     ap.add_argument("--repo", default="interrogation-room", help="创空间仓库名")
     ap.add_argument("--visibility", default="public", choices=["public", "private", "protected"])
-    ap.add_argument("--hardware", default="platform/2v-cpu-16g-mem",
-                    help="规格；paid/* 会计费，需单独授权")
+    ap.add_argument("--hardware", default="platform/2v-cpu-8g-mem",
+                    help="规格；免费为 platform/2v-cpu-8g-mem，paid/* 会计费需单独授权")
     ap.add_argument("--display-name", default="审讯室 · 谎言侦探")
     ap.add_argument("--model", default="Qwen/Qwen2.5-72B-Instruct", help="MODELSPACE_MODEL")
     ap.add_argument("--skip-push", action="store_true", help="跳过代码推送，仅重建/重部署")
