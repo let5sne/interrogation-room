@@ -63,6 +63,7 @@ function renderEvidence(list) {
     el.className = "ev";
     el.textContent = e.name;
     el.dataset.id = e.id;
+    el.addEventListener("click", () => doPresent(e.id, el));
     box.appendChild(el);
   });
 }
@@ -98,9 +99,105 @@ function bindEvents() {
     inp.value = "";
     sendAsk(v);
   });
+  document.querySelectorAll(".actions button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const act = btn.dataset.act;
+      if (act === "pressure") doPressure();
+      else if (act === "observe") doObserve();
+      else if (act === "accuse-open") $("#accuse-modal").classList.remove("hidden");
+    });
+  });
+  $("#accuse-submit").addEventListener("click", submitAccuse);
+  $("#accuse-cancel").addEventListener("click", () => $("#accuse-modal").classList.add("hidden"));
+  $("#brief-start").addEventListener("click", () => $("#brief-modal").classList.add("hidden"));
+  $("#result-restart").addEventListener("click", () => location.reload());
 }
 
 window.addEventListener("DOMContentLoaded", () => {
   bindEvents();
   startSession();
 });
+
+async function doPressure() {
+  if (!state.sessionId) return;
+  addLine("detective", "（猛地一拍桌子，厉声施压）");
+  const r = await fetch("/api/pressure", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: state.sessionId }),
+  });
+  const d = await r.json();
+  if (typeof d.composure === "number") setComposure(d.composure);
+  const target = addLine("suspect", "");
+  typeInto(target, d.message || "");
+  state.turn += 1;
+  $("#turn-num").textContent = state.turn;
+  if (d.lawyer_up) setTimeout(() => showResult(false, "嫌疑人要求律师，审讯终止，你失败了。"), 1200);
+}
+
+async function doObserve() {
+  if (!state.sessionId) return;
+  addLine("detective", "（仔细观察 ta 的微表情）");
+  const r = await fetch("/api/observe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: state.sessionId }),
+  });
+  const d = await r.json();
+  const t = addLine("suspect", "");
+  typeInto(t, "（旁白）" + (d.description || ""));
+}
+
+function typeInto(el, text) {
+  let i = 0;
+  const timer = setInterval(() => {
+    el.textContent += text[i] || "";
+    i++;
+    if (i >= text.length) clearInterval(timer);
+  }, 24);
+}
+
+async function doPresent(evidenceId, el) {
+  if (!state.sessionId) return;
+  const label = el ? el.textContent : evidenceId;
+  addLine("detective", `（出示证据：${label}）`);
+  const r = await fetch("/api/present", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: state.sessionId, lie_id: null, evidence_id: evidenceId }),
+  });
+  const d = await r.json();
+  if (typeof d.composure === "number") setComposure(d.composure);
+  if (d.hit) {
+    if (el) el.classList.add("used");
+    addLine("detective", "【矛盾！】" + (d.message || ""), true);
+  } else {
+    addLine("suspect", "（轻描淡写地）" + (d.message || "这能说明什么？"));
+  }
+  state.turn += 1;
+  $("#turn-num").textContent = state.turn;
+}
+
+function showResult(win, text) {
+  $("#result-title").textContent = win ? "破案！" : "审讯失败";
+  $("#result-text").textContent = text;
+  $("#result-modal").classList.remove("hidden");
+}
+
+async function submitAccuse() {
+  const culprit = $("#accuse-culprit").value.trim();
+  const method = $("#accuse-method").value.trim();
+  const motive = $("#accuse-motive").value.trim();
+  if (!culprit || !method || !motive) {
+    alert("请填写完整");
+    return;
+  }
+  const r = await fetch("/api/accuse", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: state.sessionId, culprit, method, motive }),
+  });
+  const d = await r.json();
+  const truth = d.truth || {};
+  showResult(d.win, `${d.reason}（真相：${truth.culprit} · ${truth.method} · ${truth.motive}）`);
+}

@@ -160,3 +160,59 @@ def accuse(req: AccuseRequest):
             "motive": case["motive"],
         },
     }
+
+
+class PressureRequest(BaseModel):
+    session_id: str
+
+
+@app.post("/api/pressure")
+def pressure(req: PressureRequest):
+    s = _store.get(req.session_id)
+    if s is None:
+        return {"error": "session not found"}
+    case = get_case(s["case_id"])
+    eng = TruthEngine(case)
+    res = eng.pressure(
+        composure=s["composure"],
+        has_evidence=False,
+        pressure_count=s["pressure_count"],
+    )
+    new_comp = eng.clamp(s["composure"] + res["composure_delta"])
+    new_pc = s["pressure_count"] + 1
+    new_status = "silent" if res["lawyer_up"] else s["status"]
+    s["turn_count"] += 1
+    s["state"]["transcript"].append({"role": "detective", "text": "（施压）"})
+    _store.update(
+        s["session_id"],
+        composure=new_comp,
+        pressure_count=new_pc,
+        turn_count=s["turn_count"],
+        status=new_status,
+        state=s["state"],
+    )
+    return {
+        "composure": new_comp,
+        "lawyer_up": res["lawyer_up"],
+        "message": "你猛地一拍桌子，厉声施压。" if not res["lawyer_up"] else "嫌疑人冷冷地说：'我要请律师，无可奉告。'",
+    }
+
+
+class ObserveRequest(BaseModel):
+    session_id: str
+
+
+@app.post("/api/observe")
+def observe(req: ObserveRequest):
+    s = _store.get(req.session_id)
+    if s is None:
+        return {"error": "session not found"}
+    m = s["composure"]
+    desc = (
+        "ta 神色镇定，与你对视毫不退让。" if m >= 80
+        else "ta 有些不耐烦，手指敲着桌面。" if m >= 50
+        else "ta 额头冒汗，眼神游移。" if m >= 20
+        else "ta 呼吸急促，快要撑不住了。"
+    )
+    eng = TruthEngine(get_case(s["case_id"]))
+    return {"mood": eng.clamp(m), "description": desc}
