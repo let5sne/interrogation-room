@@ -210,5 +210,6 @@ async function submitAccuse() {
   });
   const d = await r.json();
   const truth = d.truth || {};
-  showResult(d.win, `${d.reason}（真相：${truth.culprit} · ${truth.method} · ${truth.motive}）`);
+  const clean = (s) => (s || "").replace(/。+$/, "");
+  showResult(d.win, `${d.reason}（真相：${truth.culprit} · ${clean(truth.method)} · ${clean(truth.motive)}）`);
 }
