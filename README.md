@@ -1,5 +1,7 @@
 # 审讯室 · 谎言侦探（Interrogation Room）
 
+> **🎮 线上试玩**：https://modelscope.cn/studios/let5see/interrogation-room
+
 一款「AI 审讯」网页游戏：你是侦探，对面坐着**一个 AI 嫌疑人**。它藏着秘密、会说谎、会狡辩、会反咬，但**记得你说过的每句话、出示过的每个证据**。你要抓矛盾、压镇定、做指认，破案或放跑真凶。
 
 参赛作品 · AI+∞ 开发者创作大赛 第三期「AI 造游戏」· 方向：故事与 AI NPC。
